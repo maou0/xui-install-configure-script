@@ -61,7 +61,7 @@ fi
 
 echo -e "\n${YELLOW}Внимание !!!"
 echo -e "Убедитесь что вы получили доменное имя для ip адреса этого сервера."
-echo -e "Скрипт разработан под Ubuntu 22.04 || Ubuntu 24.04."
+echo -e "Скрипт предназначен для Ubuntu 22.04 или выше."
 echo -e "Установка должна производиться на чистую машину!"
 echo -e "Вводить домен в формате FQDM (example.duckdns.org).${NC}"
 read -p "$(echo -e $CYAN)Введите доменное имя вашего сервера: $(echo -e $NC)" DOMAIN
@@ -94,7 +94,9 @@ echo -e "\n${CYAN}Будет установлена панель 3x-ui."
 echo -e "Будет создан sudo пользователь."
 echo -e "Пользователь root больше не сможет заходить на сервер по ssh."
 echo -e "Будет установлена и настроена служба knockd."
-echo -e "Будет выпущен сертификат от Letsencrypt и настроено его автоматическое обновление.${NC}"
+echo -e "Будет выпущен сертификат от Letsencrypt и настроено его автоматическое обновление."
+echo -e "Будет настроено автоматическое обновление панели 3x-ui раз в месяц."
+echo -e "Будет настроено автоматическое обновление операционной системы раз в квартал.${NC}"
 read -p "$(echo -e $YELLOW)Вы согласны продолжить? (y/N): $(echo -e $NC)" CONFIRMATION
 
 if [[ "$CONFIRMATION" =~ ^[Yy]$ ]]; then
@@ -178,31 +180,18 @@ cp /etc/letsencrypt/live/${DOMAIN}/privkey.pem /root/cert/${DOMAIN}
 # Включаем BBR
 (echo 23; echo 1; echo 0; echo 0) | x-ui
 
-# Создаем сервис, запускающий скрипт для обновления панели 3x-ui
+# Создаем сервис, запускающий команду для обновления панели 3x-ui
 cat <<EOF > /etc/systemd/system/update-xui.service
 [Unit]
 Description=Monthly 3x-ui panel update service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/update-xui.sh
+ExecStart=(echo 2; echo y) | x-ui
 EOF
 
 # Создаем таймер, по которому будет запущен сервис для обновления панели 3x-ui
 cat <<EOF > /etc/systemd/system/update-xui.timer
-[Unit]
-Description=Monthly 3x-ui panel update timer
-
-[Timer]
-OnCalendar=monthly
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-# Создаем скрипт обновления панели 3x-ui
-cat <<EOF > /usr/local/bin/update-xui.sh
 [Unit]
 Description=Monthly 3x-ui panel update timer
 
@@ -279,9 +268,40 @@ if [ \${CERT_EXPIRED} -ne 0 ] || [ \${KEY_EXPIRED} -ne 0 ]; then
     cp "\${LE_CERT}" "\${TARGET_DIR}/fullchain.pem"
     cp "\${LE_KEY}" "\${TARGET_DIR}/privkey.pem"
     echo "Новый сертификат и ключ успешно скопирован \${TARGET_DIR}."
+	x-ui restart
 else
     echo "Сертификаты не истекли, действий не требуется."
 fi
+EOF
+
+# Создаем сервис, обновляющий ОС
+cat <<EOF > /etc/systemd/system/quarterly-update.service
+[Unit]
+Description=Quarterly system update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+apt update && \
+DEBIAN_FRONTEND=noninteractive apt -y full-upgrade && \
+apt -y autoremove && \
+if [ -f /var/run/reboot-required ]; then systemctl reboot; fi'
+EOF
+
+# Создаем таймер, по которому будет запущен сервис для обновления ОС
+cat <<EOF > /etc/systemd/system/quarterly-update.timer
+[Unit]
+Description=Quarterly system update at night
+
+[Timer]
+OnCalendar=*-01,04,07,10-05 02:00
+RandomizedDelaySec=2h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
 EOF
 
 chmod +x /usr/local/bin/check_cert_expire_date.sh
@@ -289,7 +309,9 @@ chmod +x /usr/local/bin/update-xui.sh
 systemctl daemon-reload
 systemctl enable --now check-certificate.timer
 systemctl enable --now update-xui.timer
+systemctl enable --now quarterly-update.timer
 systemctl restart ssh
+
 
 echo -e "\n${YELLOW}--- Скопируйте всю информацию ниже в безопасное место, без доступа посторонних лиц! ---${NC}"
 grep 'Username:' install_log.log >> xui_info
