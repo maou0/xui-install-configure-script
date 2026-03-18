@@ -305,7 +305,7 @@ WantedBy=timers.target
 EOF
 
 chmod +x /usr/local/bin/check_cert_expire_date.sh
-chmod +x /usr/local/bin/update-xui.sh
+
 systemctl daemon-reload
 systemctl enable --now check-certificate.timer
 systemctl enable --now update-xui.timer
