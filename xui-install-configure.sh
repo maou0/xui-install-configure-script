@@ -69,7 +69,9 @@ echo -e "Вводить домен в формате FQDM (example.duckdns.org).
 read -p "$(echo -e $CYAN)Введите доменное имя вашего сервера: $(echo -e $NC)" DOMAIN
 
 # Устанавливаем утилиты curl и nslookup
+apt update
 DEBIAN_FRONTEND=noninteractive apt install dnsutils curl -y
+
 
 # Проверяем что домен не пустой
 if [[ -z "$DOMAIN" ]]; then
@@ -116,10 +118,6 @@ fi
 hostnamectl set-hostname "$DOMAIN"
 
 
-# Ставим curl
-DEBIAN_FRONTEND=noninteractive apt install curl
-
-
 # Получаем сертификаты
 echo -e "${CYAN}Получаем ssl сертификаты.${NC}"
 certbot certonly --standalone --agree-tos --register-unsafely-without-email -d "$DOMAIN"
@@ -138,7 +136,6 @@ fi
 
 # Устанавливаем дополнительные пакеты
 echo -e "${CYAN}Устанавливаем дополнительные пакеты.${NC}"
-apt update
 DEBIAN_FRONTEND=noninteractive apt upgrade -y
 dpkg --configure -a
 DEBIAN_FRONTEND=noninteractive apt upgrade -y
