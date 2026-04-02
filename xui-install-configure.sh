@@ -137,8 +137,7 @@ x-ui --help 2>/dev/null
 if [[ $? -eq 0 ]]; then
     (echo 5; echo y) | x-ui
 fi
-#(echo y; echo ${PORT_WEB}; echo 3; echo ${DOMAIN}; echo ${CERT_CHAIN}; echo ${CERT_KEY}) | /bin/bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh) >>install_log.log 2>&1
-(echo y; echo ${PORT_WEB}; echo 3; echo ${DOMAIN}; echo ${CERT_CHAIN}; echo ${CERT_KEY}) | /bin/bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
+(echo y; echo ${PORT_WEB}; echo 3; echo ${DOMAIN}; echo ${CERT_CHAIN}; echo ${CERT_KEY}) | /bin/bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh) >>install_log.log 2>&1
 
 
 # Создаем пользователя из сгенерированных логина и пароля, а также делаем его суперпользователем
